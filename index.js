@@ -100,7 +100,7 @@ bot.on("callback_query", async (query) => {
       "RUB",
       PRICES,
       {
-        photo_url: "https://soulreset.ru/assets/icon512.png",
+        photo_url: "http://soulreset.ru/img/cover_q.jpg",
         photo_width: 512,
         photo_height: 512,
         need_email: false,
