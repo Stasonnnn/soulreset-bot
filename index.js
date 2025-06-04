@@ -12,7 +12,7 @@ const API_URL = "https://soulreset.ru/api/add_paid_user.php?key=my_secret_key_23
 const PRICES = [
   {
     label: "Подписка на месяц",
-    amount: 10000,
+    amount: 199000,
   },
 ];
 
