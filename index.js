@@ -16,7 +16,8 @@ const PRICES = [
   },
 ];
 
-const ADMIN_ID = 970696381; // ← сюда вставь СВОЙ Telegram ID
+// === Укажи свой Telegram ID ===
+const ADMIN_ID = 970696381; // ← замени на свой ID
 
 // === /sendall ===
 bot.onText(/\/sendall (.+)/, (msg, match) => {
@@ -30,20 +31,55 @@ bot.onText(/\/sendall (.+)/, (msg, match) => {
 
   let users = [];
   try {
-    users = JSON.parse(fs.readFileSync("users.json"));
+    users = JSON.parse(fs.readFileSync("users.json", "utf8"));
   } catch (err) {
     console.error("Не удалось прочитать users.json:", err.message);
     bot.sendMessage(chatId, "⚠️ Ошибка чтения списка пользователей.");
     return;
   }
 
-  users.forEach((id) => {
-    bot.sendMessage(id, text).catch((err) => {
-      console.error(`❗ Ошибка отправки ${id}: ${err.message}`);
-    });
+  if (!Array.isArray(users) || users.length === 0) {
+    bot.sendMessage(chatId, "⚠️ Список пользователей пуст.");
+    return;
+  }
+
+  bot.sendMessage(chatId, `📤 Рассылка начата по ${users.length} пользователям...`);
+
+  users.forEach((id, index) => {
+    setTimeout(() => {
+      bot.sendMessage(id, text).catch((err) => {
+        console.error(`❗ Ошибка отправки ${id}: ${err.message}`);
+      });
+    }, index * 100); // задержка 100мс
   });
 
-  bot.sendMessage(chatId, "✅ Рассылка отправлена!");
+  setTimeout(() => {
+    bot.sendMessage(chatId, "✅ Рассылка отправлена!");
+  }, users.length * 100 + 500);
+});
+
+// === /exportusers ===
+bot.onText(/\/exportusers/, (msg) => {
+  const chatId = msg.chat.id;
+
+  if (chatId !== ADMIN_ID) {
+    bot.sendMessage(chatId, "❌ У тебя нет доступа к этой команде.");
+    return;
+  }
+
+  const filePath = "users.json";
+
+  if (fs.existsSync(filePath)) {
+    bot.sendDocument(chatId, filePath, {}, {
+      filename: "users.json",
+      contentType: "application/json"
+    }).catch((err) => {
+      console.error("❗ Ошибка отправки файла:", err.message);
+      bot.sendMessage(chatId, "⚠️ Не удалось отправить файл.");
+    });
+  } else {
+    bot.sendMessage(chatId, "📭 Файл users.json не найден.");
+  }
 });
 
 // === /start ===
