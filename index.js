@@ -18,6 +18,32 @@ const PRICES = [
 
 const bot = new TelegramBot(token, { polling: true });
 
+
+// === /exportusers ===
+bot.onText(/\/exportusers/, (msg) => {
+  const chatId = msg.chat.id;
+
+  if (chatId !== ADMIN_ID) {
+    bot.sendMessage(chatId, "❌ У тебя нет доступа к этой команде.");
+    return;
+  }
+
+  const filePath = "users.json";
+
+  if (fs.existsSync(filePath)) {
+    bot.sendDocument(chatId, filePath, {}, {
+      filename: "users.json",
+      contentType: "application/json"
+    }).catch((err) => {
+      console.error("❗ Ошибка отправки файла:", err.message);
+      bot.sendMessage(chatId, "⚠️ Не удалось отправить файл.");
+    });
+  } else {
+    bot.sendMessage(chatId, "📭 Файл users.json не найден.");
+  }
+});
+
+
 // === /sendall ===
 bot.onText(/\/sendall (.+)/, (msg, match) => {
   const chatId = msg.chat.id;
