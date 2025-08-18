@@ -61,7 +61,7 @@ bot.onText(/\/start/, (msg) => {
     fs.writeFileSync("users.json", JSON.stringify(users));
   }
 
-  const imageUrl = "https://soulreset.ru/img/box_lila_maket1.jpg";
+  const imageUrl = "https://soulreset.ru/img/box_lila_tg.png";
   const webAppUrl = "https://soulreset.ru/play/choose.html";
 
   bot.sendPhoto(chatId, imageUrl, {
@@ -137,7 +137,8 @@ https://soulreset.ru/oferta.html
 
       if (["creator", "administrator", "member"].includes(status)) {
         await bot.deleteMessage(chatId, messageId);
-        await bot.sendMessage(chatId, "🎉 Подписка подтверждена! Вот твой доступ 👇", {
+          await bot.sendPhoto(chatId, "https://soulreset.ru/img/cover_q.jpg", {
+            caption: "🎉 Подписка подтверждена! Вот твой доступ 👇",
           reply_markup: {
             inline_keyboard: [
               [{ text: "🚀 Войти в демо", web_app: { url: "https://soulreset.ru/play/68.Cosmic_f.html" } }],
