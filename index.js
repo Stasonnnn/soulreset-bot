@@ -1,23 +1,22 @@
+require('dotenv').config();
 const TelegramBot = require("node-telegram-bot-api");
-const axios = require("axios");
+const express = require("express");
 const fs = require("fs");
-require("dotenv").config();
+const axios = require("axios");
 
 const token = process.env.BOT_TOKEN;
-const bot = new TelegramBot(token, { polling: true });
-
 const PROVIDER_TOKEN = process.env.PROVIDER_TOKEN;
 const API_URL = "https://soulreset.ru/api/add_paid_user.php?key=my_secret_key_2324";
+const ADMIN_ID = 970696381;
 
 const PRICES = [
   {
     label: "Подписка на месяц",
-    amount: 199000,
+    amount: 10000, // 1990 руб в копейках
   },
 ];
 
-// === Укажи свой Telegram ID ===
-const ADMIN_ID = 970696381; // ← замени на свой ID
+const bot = new TelegramBot(token, { polling: true });
 
 // === /sendall ===
 bot.onText(/\/sendall (.+)/, (msg, match) => {
@@ -31,73 +30,36 @@ bot.onText(/\/sendall (.+)/, (msg, match) => {
 
   let users = [];
   try {
-    users = JSON.parse(fs.readFileSync("users.json", "utf8"));
+    users = JSON.parse(fs.readFileSync("users.json"));
   } catch (err) {
-    console.error("Не удалось прочитать users.json:", err.message);
-    bot.sendMessage(chatId, "⚠️ Ошибка чтения списка пользователей.");
-    return;
+    users = [];
   }
 
-  if (!Array.isArray(users) || users.length === 0) {
-    bot.sendMessage(chatId, "⚠️ Список пользователей пуст.");
-    return;
-  }
-
-  bot.sendMessage(chatId, `📤 Рассылка начата по ${users.length} пользователям...`);
-
-  users.forEach((id, index) => {
-    setTimeout(() => {
-      bot.sendMessage(id, text).catch((err) => {
-        console.error(`❗ Ошибка отправки ${id}: ${err.message}`);
-      });
-    }, index * 100); // задержка 100мс
+  users.forEach((id) => {
+    bot.sendMessage(id, text).catch((err) => {
+      console.error(`❗ Ошибка отправки ${id}: ${err.message}`);
+    });
   });
 
-  setTimeout(() => {
-    bot.sendMessage(chatId, "✅ Рассылка отправлена!");
-  }, users.length * 100 + 500);
-});
-
-// === /exportusers ===
-bot.onText(/\/exportusers/, (msg) => {
-  const chatId = msg.chat.id;
-
-  if (chatId !== ADMIN_ID) {
-    bot.sendMessage(chatId, "❌ У тебя нет доступа к этой команде.");
-    return;
-  }
-
-  const filePath = "users.json";
-
-  if (fs.existsSync(filePath)) {
-    bot.sendDocument(chatId, filePath, {}, {
-      filename: "users.json",
-      contentType: "application/json"
-    }).catch((err) => {
-      console.error("❗ Ошибка отправки файла:", err.message);
-      bot.sendMessage(chatId, "⚠️ Не удалось отправить файл.");
-    });
-  } else {
-    bot.sendMessage(chatId, "📭 Файл users.json не найден.");
-  }
+  bot.sendMessage(chatId, "✅ Рассылка отправлена!");
 });
 
 // === /start ===
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
 
-  // --- Добавление пользователя в users.json ---
+  // Добавление пользователя
   let users = [];
   try {
     users = JSON.parse(fs.readFileSync("users.json"));
-  } catch (err) {
+  } catch {
     users = [];
   }
+
   if (!users.includes(chatId)) {
     users.push(chatId);
     fs.writeFileSync("users.json", JSON.stringify(users));
   }
-  // --- конец блока ---
 
   const imageUrl = "https://soulreset.ru/img/box_lila_maket1.jpg";
   const webAppUrl = "https://soulreset.ru/play/choose.html";
@@ -107,10 +69,10 @@ bot.onText(/\/start/, (msg) => {
     parse_mode: "Markdown",
     reply_markup: {
       inline_keyboard: [
-        [{ text: "🚀 Заходи в Игру", web_app: { url: webAppUrl } }],
-        [{ text: "💳 PREMIYM за 1990 руб", callback_data: "pay" }],
-        [{ text: "ℹ️ Инфо о подписке", callback_data: "about_subscription" }],
         [{ text: "🔥 ДЕМО доступ", callback_data: "demo_access" }],
+        [{ text: "💳 Купить PREMIUM ", callback_data: "pay" }],
+        [{ text: "ℹ️ Инфо о подписке", callback_data: "about_subscription" }],
+        [{ text: "🚀 PREMIUM пакет", web_app: { url: webAppUrl } }],
         [
           { text: "📢 Мой канал", url: "https://t.me/drestas" },
           { text: "🌐 Официальный сайт", url: "https://soulreset.ru/main.html" },
@@ -120,7 +82,7 @@ bot.onText(/\/start/, (msg) => {
   });
 });
 
-// === ОДИН обработчик callback_query ===
+// === Обработка callback_query ===
 bot.on("callback_query", async (query) => {
   const chatId = query.message.chat.id;
   const messageId = query.message.message_id;
@@ -136,7 +98,7 @@ bot.on("callback_query", async (query) => {
       "RUB",
       PRICES,
       {
-        photo_url: "http://soulreset.ru/img/cover_q.jpg",
+        photo_url: "https://soulreset.ru/img/cover_q.jpg",
         photo_width: 512,
         photo_height: 512,
         need_email: false,
@@ -145,30 +107,23 @@ bot.on("callback_query", async (query) => {
     );
   } else if (query.data === "about_subscription") {
     bot.sendMessage(chatId, `
-📄 Что входит в подписку SoulReset PREMIUM:
+📄 *Что входит в подписку SoulReset PREMIUM:*
 
-— 🔓 Полный доступ ко всем 72 практикам (аудио, видео, текст)
-— 🌀 Доступ к новинкам и регулярным обновлениям
-— 🎯 Терапевтические программы и авторский коучинг
-— 🎮 Полноценный режим игры «Лила»
-— 🤝 Поддержка и ответы на вопросы в Telegram-чате
+— 🔓 Полный доступ ко всем 72 практикам  
+— 🌀 Доступ к новинкам и регулярным обновлениям  
+— 🎯 Терапевтические программы коучинга  
+— 🎮 Режим Игры «Лила»  
+— 🤝 Поддержка в Telegram-чате
 
-💰 Стоимость: 1990 ₽ / месяц
-⏳ Срок действия: 30 дней
+💰 Стоимость: 1990 ₽  
+⏳ Срок: 30 дней  
 📌 Оплата через Telegram Pay
 
-🛎 Нажимая кнопку «Купить», вы соглашаетесь с офертой:
+С офертой можно ознакомиться здесь:  
 https://soulreset.ru/oferta.html
-
-🗓 Дорожная карта (Roadmap) обновлений:
-
-Июнь: запуск вкладки «Практика дня»
-Июль: расширенный режим «Терапия 2.0»
-Август: обновление всех медитаций до второй версии
-Сентябрь: релиз приложения в Google Play Store
 `, { parse_mode: "Markdown" });
   } else if (query.data === "demo_access") {
-    bot.sendMessage(chatId, "Для доступа к демо необходимо быть подписанным на канал @drestas. Проверьте подписку:", {
+    bot.sendMessage(chatId, "Для демо доступа подпишитесь на канал @drestas:", {
       reply_markup: {
         inline_keyboard: [
           [{ text: "✅ Я подписался, проверить", callback_data: "check_subscription" }],
@@ -181,11 +136,8 @@ https://soulreset.ru/oferta.html
       const status = res.status;
 
       if (["creator", "administrator", "member"].includes(status)) {
-        // Удаляем сообщение с кнопками
         await bot.deleteMessage(chatId, messageId);
-
-        // Отправляем доступ к демо
-        await bot.sendMessage(chatId, "🎉 Подписка подтверждена! Переходи в демо-доступ 👇", {
+        await bot.sendMessage(chatId, "🎉 Подписка подтверждена! Вот твой доступ 👇", {
           reply_markup: {
             inline_keyboard: [
               [{ text: "🚀 Войти в демо", web_app: { url: "https://soulreset.ru/play/68.Cosmic_f.html" } }],
@@ -199,7 +151,7 @@ https://soulreset.ru/oferta.html
         });
       }
     } catch (err) {
-      console.error(err);
+      console.error(err.message);
       await bot.answerCallbackQuery(query.id, {
         text: "⚠️ Не удалось проверить подписку. Попробуйте позже.",
         show_alert: true,
@@ -244,15 +196,14 @@ bot.on("message", async (msg) => {
   }
 });
 
-// === Express-сервер для Replit ===
-const express = require("express");
+// === Express-сервер для Replit/хостинга ===
 const app = express();
+const PORT = process.env.PORT || 3000;
 
 app.get("/", (req, res) => {
   res.send("Bot is running ✅");
 });
 
-const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server is listening on port ${PORT}`);
 });
