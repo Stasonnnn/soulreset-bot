@@ -7,6 +7,8 @@ const axios = require("axios");
 const token = process.env.BOT_TOKEN;
 const PROVIDER_TOKEN = process.env.PROVIDER_TOKEN;
 const API_URL = "https://soulreset.ru/api/add_paid_user.php?key=my_secret_key_2324";
+const TELEGRAM_AUTH_WEBHOOK_URL = process.env.TELEGRAM_AUTH_WEBHOOK_URL || "https://soulreset.ru/api/telegram/webhook";
+const TELEGRAM_WEBHOOK_SECRET = process.env.TELEGRAM_WEBHOOK_SECRET || "";
 const ADMIN_ID = 970696381;
 
 const PRICES = [
@@ -70,8 +72,42 @@ bot.onText(/\/sendall (.+)/, (msg, match) => {
   bot.sendMessage(chatId, "✅ Рассылка отправлена!");
 });
 
+// === Telegram site/app auth ===
+bot.onText(/^\/start(?:@\w+)?\s+auth_([a-f0-9]{32})$/i, async (msg, match) => {
+  const chatId = msg.chat.id;
+  const authToken = String(match[1] || "").toLowerCase();
+
+  if (!TELEGRAM_WEBHOOK_SECRET) {
+    console.error("TELEGRAM_WEBHOOK_SECRET is required for Telegram auth");
+    bot.sendMessage(chatId, "Не удалось подтвердить вход. Попробуйте позже.");
+    return;
+  }
+
+  try {
+    await axios.post(TELEGRAM_AUTH_WEBHOOK_URL, {
+      update_id: Date.now(),
+      message: {
+        message_id: msg.message_id,
+        from: msg.from,
+        chat: msg.chat,
+        date: msg.date,
+        text: `/start auth_${authToken}`,
+      },
+    }, {
+      headers: {
+        "Content-Type": "application/json",
+        "X-Telegram-Bot-Api-Secret-Token": TELEGRAM_WEBHOOK_SECRET,
+      },
+      timeout: 5000,
+    });
+  } catch (err) {
+    console.error("Telegram auth confirm failed:", err.response?.data || err.message);
+    bot.sendMessage(chatId, "Не удалось подтвердить вход. Вернитесь на сайт и попробуйте ещё раз.");
+  }
+});
+
 // === /start ===
-bot.onText(/\/start/, (msg) => {
+bot.onText(/^\/start(?:@\w+)?$/i, (msg) => {
   const chatId = msg.chat.id;
 
   // Добавление пользователя
