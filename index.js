@@ -73,9 +73,10 @@ bot.onText(/\/sendall (.+)/, (msg, match) => {
 });
 
 // === Telegram site/app auth ===
-bot.onText(/^\/start(?:@\w+)?\s+auth_([a-f0-9]{32})$/i, async (msg, match) => {
+bot.onText(/^\/start(?:@\w+)?\s+((?:login_(?:site|app|tg_game)_|auth_(?:a|w)_))([a-f0-9]{32})$/i, async (msg, match) => {
   const chatId = msg.chat.id;
-  const authToken = String(match[1] || "").toLowerCase();
+  const payloadPrefix = String(match[1] || "").toLowerCase();
+  const authToken = String(match[2] || "").toLowerCase();
 
   if (!TELEGRAM_WEBHOOK_SECRET) {
     console.error("TELEGRAM_WEBHOOK_SECRET is required for Telegram auth");
@@ -84,6 +85,11 @@ bot.onText(/^\/start(?:@\w+)?\s+auth_([a-f0-9]{32})$/i, async (msg, match) => {
   }
 
   try {
+    const payloadText = payloadPrefix.startsWith("login_")
+      ? `/start ${payloadPrefix}${authToken}`
+      : payloadPrefix.startsWith("auth_")
+        ? `/start ${payloadPrefix}${authToken}`
+        : `/start login_site_${authToken}`;
     await axios.post(TELEGRAM_AUTH_WEBHOOK_URL, {
       update_id: Date.now(),
       message: {
@@ -91,7 +97,7 @@ bot.onText(/^\/start(?:@\w+)?\s+auth_([a-f0-9]{32})$/i, async (msg, match) => {
         from: msg.from,
         chat: msg.chat,
         date: msg.date,
-        text: `/start auth_${authToken}`,
+        text: payloadText,
       },
     }, {
       headers: {
