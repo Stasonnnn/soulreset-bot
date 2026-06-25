@@ -130,13 +130,14 @@ bot.onText(/^\/start(?:@\w+)?$/i, (msg) => {
   }
 
   const imageUrl = "https://soulreset.ru/img/box_lila_tg.png";
-  const webAppUrl = "https://soulreset.ru/play/choose.html";
+  const webAppUrl = "https://soulreset.ru/play/choose.html?app=1";
 
   bot.sendPhoto(chatId, imageUrl, {
     caption: `🌟 Добро пожаловать в *SoulReset*!\n\nОткрой для себя путешествие через тело, сознание и свет.`,
     parse_mode: "Markdown",
     reply_markup: {
       inline_keyboard: [
+        [{ text: "Войти через Telegram", web_app: { url: webAppUrl } }],
         [{ text: "🔥 ДЕМО доступ", callback_data: "demo_access" }],
         [{ text: "💳 Купить PREMIUM ", callback_data: "pay" }],
         [{ text: "ℹ️ Инфо о подписке", callback_data: "about_subscription" }],
